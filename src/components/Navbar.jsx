@@ -3,10 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { FaShoppingCart, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
+import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
     const { user, session } = useAuth(); // Get user and session from our context
+    const { cartItems } = useCart();
     const navigate = useNavigate();
+
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
@@ -32,14 +36,15 @@ const Navbar = () => {
                         // --- Links for Logged-In Users ---
                         <>
                             <Link to="/dashboard" className="text-lg hover:text-yellow-400 transition-colors">
-                                Dashboard
+                                Vendor Dashboard
                             </Link>
                             <Link to="/cart" className="relative text-lg hover:text-yellow-400 transition-colors">
                                 <FaShoppingCart size={24} />
-                                {/* Cart item count - we will add logic for this later */}
-                                <span className="absolute -top-2 -right-3 bg-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                    0
-                                </span>
+                                {totalItems > 0 && ( // Only show the badge if there are items
+                                    <span className="absolute -top-2 -right-3 bg-red-600 text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                        {totalItems}
+                                    </span>
+                                )}
                             </Link>
                             <button
                                 onClick={handleLogout}

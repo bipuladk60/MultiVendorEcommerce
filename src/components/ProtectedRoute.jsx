@@ -3,6 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
+import AccessDeniedPage from '../pages/AccessDeniedPage';
 
 // This function fetches the user's profile from the 'profiles' table
 const fetchUserProfile = async (userId) => {
@@ -39,9 +40,7 @@ const ProtectedRoute = () => {
 
     // 2. If there's an error fetching or the user is not a vendor, redirect
     if (isError || !user || profile?.role !== 'vendor') {
-        // You can optionally show an "Access Denied" message
-        // alert('Access Denied. You must be a vendor to view this page.');
-        return <Navigate to="/" replace />;
+        return <AccessDeniedPage />;
     }
 
     // 3. If everything is fine, render the child route (the dashboard)

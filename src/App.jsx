@@ -2,8 +2,11 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthProvider from './context/AuthContext';
+import HomePage from './pages/HomePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import VendorDashboardPage from './pages/VendorDashboardPage';
+import { CartProvider } from './context/CartContext';
+import CartPage from './pages/CartPage';
 
 // Import Pages and Components
 import SignupPage from './pages/SignupPage';
@@ -13,17 +16,12 @@ import Navbar from './components/Navbar';
 // Create a client instance for TanStack Query
 const queryClient = new QueryClient();
 
-const HomePage = () => (
-    <div className="container mx-auto p-8">
-        <h1 className="text-4xl font-bold text-gray-800">Welcome to the Marketplace!</h1>
-        <p className="mt-4 text-lg text-gray-600">Products will be displayed here soon.</p>
-    </div>
-);
 
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <CartProvider>
       <Router>
         <AuthProvider>
           <Navbar />
@@ -33,6 +31,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/cart" element={<CartPage />} />
 
               {/* Protected Vendor Route */}
               <Route element={<ProtectedRoute />}>
@@ -44,6 +43,7 @@ function App() {
           </main>
         </AuthProvider>
       </Router>
+      </CartProvider>
     </QueryClientProvider>
   );
 }
