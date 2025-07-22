@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 
-// Placeholder components we will create next
 import AddProductForm from '../components/AddProductForm';
 import ProductList from '../components/ProductList';
+import StripeOnboarding from '../components/StripeOnboarding';
 
 // API function to fetch products for the logged-in vendor
 const fetchVendorProducts = async (vendorId) => {
@@ -35,6 +35,12 @@ const VendorDashboardPage = () => {
         <div className="bg-gray-100 min-h-screen">
             <div className="container mx-auto p-4 md:p-8">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6">Vendor Dashboard</h1>
+                {/* 2. Add the new Stripe section here */}
+                <div className="mb-8">
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <StripeOnboarding />
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Column 1: Add Product Form */}
                     <div className="lg:col-span-1">
