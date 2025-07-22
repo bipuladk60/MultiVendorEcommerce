@@ -4,7 +4,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { supabase } from '../utils/supabaseClient';
 import { useCart } from '../context/CartContext';
-import CheckoutForm from '../components/CheckoutForm'; // We will create this next
+import CheckoutForm from './CheckoutForm'; 
 
 // Load Stripe with your publishable key outside of the component to avoid re-loading
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);

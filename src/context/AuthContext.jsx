@@ -1,53 +1,113 @@
 // src/context/AuthContext.jsx
 import { createContext, useState, useEffect, useContext } from 'react';
-import { supabase } from '../utils/supabaseClient'; // Adjusted path
+import { supabase } from '../utils/supabaseClient';
 
 const AuthContext = createContext({});
 
-// Custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [session, setSession] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        // Get the initial session
-        const getInitialSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setSession(session);
-            setUser(session?.user ?? null);
-            setLoading(false);
-        };
+  const handleSession = (session) => {
+    if (!session?.user) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
 
-        getInitialSession();
+    const { user: sessionUser } = session;
+    setUser(sessionUser);
 
-        // Set up a listener for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
-                setSession(session);
-                setUser(session?.user ?? null);
-            }
-        );
+    // Create profile from user metadata
+    const userProfile = {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      role: sessionUser.user_metadata?.role || 'user',
+      username: sessionUser.user_metadata?.username,
+    };
+    setProfile(userProfile);
+  };
 
-        // Cleanup the subscription when the component unmounts
-        return () => {
-            subscription?.unsubscribe();
-        };
-    }, []);
+  useEffect(() => {
+    let mounted = true;
 
-    const value = {
-        session,
-        user,
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
+        
+        if (mounted) {
+          handleSession(session);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setError(error.message);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    // Render children only after loading is complete
-    return (
-        <AuthContext.Provider value={value}>
-            {!loading && children}
-        </AuthContext.Provider>
+    // Initialize auth state
+    initializeAuth();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session);
+        if (!mounted) return;
+
+        handleSession(session);
+        setLoading(false);
+      }
     );
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  const value = {
+    user,
+    profile,
+    loading,
+    error,
+    signOut: async () => {
+      try {
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+      } catch (error) {
+        console.error('Sign out error:', error);
+        setError(error.message);
+      }
+    }
+  };
+
+  // Debug current state
+  console.log('Auth state:', { user, profile, loading, error });
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;

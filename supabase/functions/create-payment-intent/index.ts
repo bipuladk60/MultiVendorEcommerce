@@ -1,10 +1,17 @@
 // supabase/functions/create-payment-intent/index.ts
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import Stripe from 'https://esm.sh/stripe@11.1.0?target=deno';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.15.0';
+// Use a much newer, more stable version of the Deno standard library
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// Use a newer version of the Stripe library from esm.sh
+import Stripe from "https://esm.sh/stripe@15.8.0?target=deno";
+// Use a newer version of the Supabase library from esm.sh
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.4";
 
 const stripe = new Stripe(/* ... */);
-const supabaseAdmin = createClient(/* ... */);
+const supabaseAdmin = createClient(
+  Deno.env.get('PROJECT_URL')!,
+  Deno.env.get('SERVICE_KEY')! 
+
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

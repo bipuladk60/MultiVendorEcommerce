@@ -1,5 +1,5 @@
 // src/components/ProtectedRoute.jsx
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
@@ -19,7 +19,7 @@ const fetchUserProfile = async (userId) => {
     return data;
 };
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ children }) => {
     const { user } = useAuth();
 
     // Use TanStack Query to fetch the profile
@@ -43,8 +43,8 @@ const ProtectedRoute = () => {
         return <AccessDeniedPage />;
     }
 
-    // 3. If everything is fine, render the child route (the dashboard)
-    return <Outlet />;
+    // 3. If everything is fine, render the children
+    return children;
 };
 
 export default ProtectedRoute;

@@ -1,4 +1,4 @@
-// src/pages/LoginPage.jsx
+// src/pages/VendorLoginPage.jsx
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
@@ -10,7 +10,7 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required.'),
 });
 
-const loginUser = async (formData) => {
+const loginVendor = async (formData) => {
   // 1. Sign in the user
   const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
     email: formData.email,
@@ -32,30 +32,30 @@ const loginUser = async (formData) => {
     throw new Error(`A profile for this user could not be found. Please contact support.`);
   }
 
-  // 3. Check if this is a vendor trying to log in through the customer login
-  if (profile.role === 'vendor') {
+  // 3. Check if this is a customer trying to log in through the vendor login
+  if (profile.role !== 'vendor') {
     await supabase.auth.signOut();
-    throw new Error('Please use the vendor login page if you are a vendor.');
+    throw new Error('Please use the customer login page if you are a customer.');
   }
 
   return profile;
 };
 
-const LoginPage = () => {
+const VendorLoginPage = () => {
   const navigate = useNavigate();
   const [formError, setFormError] = useState(null);
 
   const mutation = useMutation({
-    mutationFn: loginUser,
+    mutationFn: loginVendor,
     onSuccess: () => {
-      // Regular users always go to the homepage
-      navigate('/');
+      // Vendors always go to the dashboard
+      navigate('/vendor/dashboard');
     },
     onError: (error) => {
       setFormError(error.message);
-      if (error.message.includes('vendor login page')) {
-        // Add a slight delay before redirecting to vendor login
-        setTimeout(() => navigate('/vendor/login'), 2000);
+      if (error.message.includes('customer login page')) {
+        // Add a slight delay before redirecting to customer login
+        setTimeout(() => navigate('/login'), 2000);
       }
     },
   });
@@ -78,7 +78,7 @@ const LoginPage = () => {
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
       <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Customer Login</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Vendor Login</h2>
         
         {formError && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -112,20 +112,20 @@ const LoginPage = () => {
           <button 
             type="submit" 
             disabled={mutation.isPending} 
-            className="w-full p-3 text-white bg-blue-600 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+            className="w-full p-3 text-white bg-indigo-600 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors"
           >
             {mutation.isPending ? 'Logging In...' : 'Log In'}
           </button>
         </form>
         <p className="text-center mt-4 text-sm">
-          Are you a vendor? <Link to="/vendor/login" className="text-blue-600 hover:underline">Login here</Link>
+          Are you a customer? <Link to="/login" className="text-indigo-600 hover:underline">Login here</Link>
         </p>
         <p className="text-center mt-2 text-sm">
-          Don't have an account? <Link to="/signup" className="text-blue-600 hover:underline">Sign Up</Link>
+          Don't have an account? <Link to="/signup" className="text-indigo-600 hover:underline">Sign Up</Link>
         </p>
       </div>
     </div>
   );
 };
 
-export default LoginPage;
+export default VendorLoginPage;
