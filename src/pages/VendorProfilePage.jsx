@@ -1,107 +1,41 @@
 // src/pages/VendorProfilePage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { FaStore, FaBox, FaChartLine } from 'react-icons/fa';
-import { Line, Doughnut } from 'react-chartjs-2';
+import { Line } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend,
 } from 'chart.js';
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-// API function to fetch vendor orders using our secure RPC call
 const fetchVendorOrders = async () => {
-  console.log("fetchVendorOrders (RPC): Attempting to fetch orders for current vendor...");
   const { data, error } = await supabase.rpc('get_vendor_orders');
-  if (error) {
-    console.error("fetchVendorOrders (RPC): API Error:", error);
-    throw error;
-  }
-  console.log("fetchVendorOrders (RPC): Data received:", data); // Log the received data
+  if (error) throw error;
   return data || [];
 };
 
-// API function to calculate analytics based on fetched orders
 const calculateVendorAnalytics = (orders) => {
   if (!orders || orders.length === 0) {
-    return {
-      totalOrders: 0,
-      totalRevenue: 0,
-      pendingOrders: 0,
-      completedOrders: 0,
-      recentSales: [],
-      ordersByStatus: {}
-    };
+    return { totalOrders: 0, totalRevenue: 0, completedOrders: 0, processingOrders: 0, dailySales: {}, weeklySales: {} };
   }
-
-  // Sort orders by date
-  const sortedOrders = [...orders].sort((a, b) => 
-    new Date(a.created_at) - new Date(b.created_at)
-  );
-
-  // Get last 30 days of sales
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-  // Calculate basic metrics
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
-  const pendingOrders = orders.filter(o => o.status === 'Pending').length;
-  const completedOrders = orders.filter(o => o.status === 'Completed').length;
-
-  // Calculate orders by status
-  const ordersByStatus = orders.reduce((acc, order) => {
-    acc[order.status] = (acc[order.status] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Calculate daily sales for the last 30 days
-  const recentSales = [];
-  let currentDate = new Date(thirtyDaysAgo);
-
-  while (currentDate <= new Date()) {
-    const dateStr = currentDate.toISOString().split('T')[0];
-    const dayOrders = orders.filter(order => 
-      order.created_at.split('T')[0] === dateStr
-    );
-    
-    recentSales.push({
-      date: dateStr,
-      revenue: dayOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0),
-      orders: dayOrders.length
-    });
-
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  return {
-    totalOrders,
-    totalRevenue,
-    pendingOrders,
-    completedOrders,
-    recentSales,
-    ordersByStatus
-  };
+  const completedOrders = orders.filter(o => o.status === 'Delivered').length;
+  const processingOrders = orders.filter(o => o.status === 'Processing' || o.status === 'Shipped').length;
+  const dailySales = {};
+  const weeklySales = {};
+  orders.forEach(order => {
+    const orderDate = new Date(order.created_at);
+    const dateKey = orderDate.toISOString().split('T')[0];
+    dailySales[dateKey] = (dailySales[dateKey] || 0) + parseFloat(order.total_price);
+    const weekStart = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() - orderDate.getDay());
+    const weekKey = weekStart.toISOString().split('T')[0];
+    weeklySales[weekKey] = (weeklySales[weekKey] || 0) + parseFloat(order.total_price);
+  });
+  return { totalOrders, totalRevenue, completedOrders, processingOrders, dailySales, weeklySales };
 };
 
 const VendorProfilePage = () => {
@@ -109,14 +43,7 @@ const VendorProfilePage = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
-  
-  // Add chart refs
-  const revenueChartRef = useRef(null);
-  const statusChartRef = useRef(null);
-
-  const [formData, setFormData] = useState({
-    business_name: '', phone: '', address: '', tax_id: ''
-  });
+  const [formData, setFormData] = useState({ business_name: '', phone: '', address: '', tax_id: '' });
 
   useEffect(() => {
     if (profile) {
@@ -213,41 +140,27 @@ const VendorProfilePage = () => {
       {ordersLoading ? <p>Loading orders...</p> : orders.length === 0 ? <p className="text-gray-500">No new orders found.</p> : (
         <div className="space-y-6">
           {orders.map((order) => (
-            <div key={order.order_id} className="border rounded-lg p-4"> {/* Use order_id for key */}
+            <div key={order.order_id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="font-medium">Order #{order.order_id}</p>
                   <p className="text-sm text-gray-500">Customer: {order.customer_username} ({order.customer_email})</p>
                   <p className="text-sm text-gray-500">Placed on: {new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
-                <select 
-                  value={order.status} 
-                  onChange={(e) => updateOrderStatusMutation.mutate({ orderId: order.order_id, status: e.target.value })} 
-                  disabled={updateOrderStatusMutation.isPending}
-                  className={`rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${getStatusClasses(order.status)}`}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Processing">Processing</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Cancelled">Cancelled</option>
+                <select value={order.status} onChange={(e) => updateOrderStatusMutation.mutate({ orderId: order.order_id, status: e.target.value })} disabled={updateOrderStatusMutation.isPending} className={`rounded-md border-gray-300 shadow-sm ${getStatusClasses(order.status)}`}>
+                  <option>Pending</option><option>Processing</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option>
                 </select>
               </div>
               <div className="mt-4 border-t pt-4">
-                {order.order_items && order.order_items.length > 0 ? (
-                  order.order_items.map((item, index) => (
-                    // Use item.id as key for consistency if available, otherwise index is fine
-                    <div key={item.id || index} className="flex items-center space-x-4 py-2">
-                      <img src={item.product.image_url || 'https://via.placeholder.com/64'} alt={item.product.name} className="w-16 h-16 object-cover rounded"/>
-                      <div>
-                        <p className="font-medium">{item.product.name}</p>
-                        <p className="text-sm text-gray-500">Quantity: {item.quantity} x ${item.price_at_purchase.toFixed(2)}</p>
-                      </div>
+                {order.order_items?.map((item, index) => (
+                  <div key={item.id || index} className="flex items-center space-x-4 py-2">
+                    <img src={item.product.image_url || 'https://via.placeholder.com/64'} alt={item.product.name} className="w-16 h-16 object-cover rounded"/>
+                    <div>
+                      <p className="font-medium">{item.product.name}</p>
+                      <p className="text-sm text-gray-500">Quantity: {item.quantity} x ${item.price_at_purchase.toFixed(2)}</p>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No items found for this order.</p>
-                )}
+                  </div>
+                ))}
               </div>
               <div className="mt-4 pt-4 border-t"><p className="text-right font-medium">Order Total: ${parseFloat(order.total_price).toFixed(2)}</p></div>
             </div>
@@ -258,187 +171,35 @@ const VendorProfilePage = () => {
   );
 
   const renderAnalyticsSection = () => {
-    if (analyticsLoading) {
-      return (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
-          <p>Loading analytics...</p>
-        </div>
-      );
-    }
-
-    // Prepare data for the revenue chart
-    const revenueChartData = {
-      labels: analytics.recentSales.map(sale => {
-        const date = new Date(sale.date);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }),
-      datasets: [
-        {
-          label: 'Daily Revenue',
-          data: analytics.recentSales.map(sale => sale.revenue),
-          borderColor: 'rgb(59, 130, 246)', // blue-500
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.4
-        },
-        {
-          label: 'Number of Orders',
-          data: analytics.recentSales.map(sale => sale.orders),
-          borderColor: 'rgb(16, 185, 129)', // green-500
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          fill: true,
-          tension: 0.4,
-          yAxisID: 'ordersAxis'
-        }
-      ]
+    const getChartData = (salesData, title) => {
+      const labels = Object.keys(salesData).sort();
+      const data = labels.map(label => salesData[label]);
+      return { labels, datasets: [{ label: title, data, fill: false, borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] };
     };
-
-    const revenueChartOptions = {
-      responsive: true,
-      interaction: {
-        mode: 'index',
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          position: 'top',
-        },
-        title: {
-          display: true,
-          text: 'Last 30 Days Performance'
-        }
-      },
-      scales: {
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          title: {
-            display: true,
-            text: 'Revenue ($)'
-          }
-        },
-        ordersAxis: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          title: {
-            display: true,
-            text: 'Number of Orders'
-          },
-          grid: {
-            drawOnChartArea: false
-          }
-        }
-      }
-    };
-
-    // Prepare data for the status chart
-    const statusChartData = {
-      labels: Object.keys(analytics.ordersByStatus),
-      datasets: [{
-        data: Object.values(analytics.ordersByStatus),
-        backgroundColor: [
-          'rgba(59, 130, 246, 0.8)', // blue
-          'rgba(16, 185, 129, 0.8)', // green
-          'rgba(245, 158, 11, 0.8)', // yellow
-          'rgba(239, 68, 68, 0.8)',  // red
-          'rgba(107, 114, 128, 0.8)' // gray
-        ]
-      }]
-    };
-
-    const statusChartOptions = {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: 'right',
-        },
-        title: {
-          display: true,
-          text: 'Orders by Status'
-        }
-      }
-    };
+    const chartOptions = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Sales Over Time' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Revenue ($)' } }, x: { title: { display: true, text: 'Date' } } } };
 
     return (
-      <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
+        {analyticsLoading ? <p>Loading analytics...</p> : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-blue-800">Total Orders</h3>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{analytics.totalOrders}</p>
-            </div>
-            <div className="bg-green-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-green-800">Total Revenue</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">
-                ${analytics.totalRevenue.toFixed(2)}
-              </p>
-            </div>
-            <div className="bg-yellow-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-yellow-800">Pending Orders</h3>
-              <p className="text-3xl font-bold text-yellow-600 mt-2">{analytics.pendingOrders}</p>
-            </div>
-            <div className="bg-purple-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-purple-800">Completed Orders</h3>
-              <p className="text-3xl font-bold text-purple-600 mt-2">{analytics.completedOrders}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts */}
-        {analytics.totalOrders > 0 && (
-          <>
-            {/* Revenue and Orders Chart */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="h-[400px]">
-                <Line
-                  ref={revenueChartRef}
-                  data={revenueChartData}
-                  options={revenueChartOptions}
-                  key="revenue-chart"
-                />
-              </div>
-            </div>
-
-            {/* Orders by Status Chart */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="h-[300px]">
-                <Doughnut
-                  ref={statusChartRef}
-                  data={statusChartData}
-                  options={statusChartOptions}
-                  key="status-chart"
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {analytics.totalOrders === 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-500 text-center">No sales data available yet.</p>
+            <div className="bg-blue-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-blue-800">Total Orders</h3><p className="text-3xl font-bold text-blue-600 mt-2">{analytics?.totalOrders}</p></div>
+            <div className="bg-green-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-green-800">Total Revenue</h3><p className="text-3xl font-bold text-green-600 mt-2">${analytics?.totalRevenue.toFixed(2)}</p></div>
+            <div className="bg-yellow-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-yellow-800">Processing Orders</h3><p className="text-3xl font-bold text-yellow-600 mt-2">{analytics?.processingOrders}</p></div>
+            <div className="bg-purple-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-purple-800">Completed Orders</h3><p className="text-3xl font-bold text-purple-600 mt-2">{analytics?.completedOrders}</p></div>
           </div>
         )}
+        {!analyticsLoading && analytics?.totalOrders > 0 ? (
+            <div className="mt-8">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Daily Sales</h3>
+                <div className="h-80 w-full"><Line data={getChartData(analytics.dailySales, 'Daily Revenue')} options={chartOptions} /></div>
+                <h3 className="text-xl font-semibold text-gray-800 mt-8 mb-4">Weekly Sales</h3>
+                <div className="h-80 w-full"><Line data={getChartData(analytics.weeklySales, 'Weekly Revenue')} options={chartOptions} /></div>
+            </div>
+        ) : ( !analyticsLoading && <p className="mt-8 text-gray-500">No sales data to display for charts yet.</p> )}
       </div>
     );
   };
-
-  // Add cleanup effect
-  useEffect(() => {
-    return () => {
-      if (revenueChartRef.current) {
-        revenueChartRef.current.destroy();
-      }
-      if (statusChartRef.current) {
-        statusChartRef.current.destroy();
-      }
-    };
-  }, []);
-
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
