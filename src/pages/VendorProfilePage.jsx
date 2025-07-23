@@ -29,21 +29,21 @@ const VendorProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
 
-  // Update the initial form state to match the profile fields
+  // Update the initial form state
   const [formData, setFormData] = useState({
     business_name: '',
     phone: '',
-    business_address: '',
+    address: '',  // Changed from business_address
     tax_id: ''
   });
 
-  // Update the useEffect to sync with profile data
+  // Update useEffect to use correct field name
   useEffect(() => {
     if (profile) {
       setFormData({
         business_name: profile.business_name || '',
         phone: profile.phone || '',
-        business_address: profile.business_address || '',
+        address: profile.address || '',  // Changed from business_address
         tax_id: profile.tax_id || ''
       });
     }
@@ -154,8 +154,8 @@ const VendorProfilePage = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Business Address</label>
               <textarea
-                value={formData.business_address}
-                onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                value={formData.address}  // Changed from business_address
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}  // Changed from business_address
                 rows={3}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               />
@@ -193,7 +193,9 @@ const VendorProfilePage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Business Address</label>
-              <p className="mt-1 text-sm text-gray-900 whitespace-pre-line">{profile?.business_address || 'Not provided'}</p>
+              <p className="mt-1 text-sm text-gray-900 whitespace-pre-line">
+                {profile?.address || 'Not provided'}  {/* Changed from business_address */}
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Tax ID</label>
