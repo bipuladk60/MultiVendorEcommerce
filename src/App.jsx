@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { useEffect } from 'react'; // Import useEffect for AppContent
+import ProductDetailPage from './pages/ProductDetailPage'; 
 
 // Import Components
 import ErrorBoundary from './components/ErrorBoundary';
@@ -92,6 +93,7 @@ const AppContent = () => {
         <Route index element={<HomePage />} />
         <Route path="cart" element={<CartPage />} />
         <Route path="profile" element={<UserProfilePage />} />
+        <Route path="products/:id" element={<ProductDetailPage />} />
 
         {/* Checkout & Order Success (public-ish, but usually requires logged in user) */}
         <Route path="checkout" element={<CheckoutPage />} />

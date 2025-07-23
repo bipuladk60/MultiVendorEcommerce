@@ -1,12 +1,14 @@
 // src/pages/HomePage.jsx
-import { useState } from 'react'; // Import useState for search term
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../utils/supabaseClient';
 import { useCart } from '../context/CartContext';
-import { FaShoppingCart, FaSearch } from 'react-icons/fa'; // Import FaSearch icon
+import { FaShoppingCart, FaSearch } from 'react-icons/fa';
+import { Link } from 'react-router-dom'; // Import Link
 
 // API function to fetch all products AND their vendor's info
 const fetchAllProducts = async () => {
+    // This is the clean, working select statement without comments
     const { data, error } = await supabase
         .from('products')
         .select(`
@@ -24,13 +26,16 @@ const fetchAllProducts = async () => {
         `)
         .order('created_at', { ascending: false });
     
-    if (error) throw new Error(error.message);
+    if (error) {
+        console.error("Error fetching products:", error);
+        throw error;
+    }
     return data;
 };
 
 const HomePage = () => {
     const { addToCart } = useCart();
-    const [searchTerm, setSearchTerm] = useState(''); // State for search input
+    const [searchTerm, setSearchTerm] = useState('');
     const { data: products, isLoading, error } = useQuery({
         queryKey: ['allProductsWithVendorInfo'],
         queryFn: fetchAllProducts,
@@ -39,8 +44,8 @@ const HomePage = () => {
     // Filter products based on search term
     const filteredProducts = products?.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchTerm.toLowerCase()) // Search by description too
-    ) || []; // Ensure it's an empty array if products is null
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    ) || [];
 
     if (isLoading) return <div className="p-8 text-center text-xl text-gray-700">Loading products...</div>;
     if (error) return <div className="p-8 text-center text-red-500">Error fetching products: {error.message}</div>;
@@ -48,13 +53,14 @@ const HomePage = () => {
     return (
         <div className="bg-gray-100 min-h-screen">
             <div className="container mx-auto p-4 md:p-8">
+                <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">Marketplace</h1>
                 
-                {/* --- NEW: Search Bar --- */}
+                {/* Search Bar */}
                 <div className="mb-8 flex justify-center">
                     <div className="relative w-full max-w-lg">
                         <input
                             type="text"
-                            placeholder="Search products by name or description..."
+                            placeholder="Search products..."
                             className="w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -68,64 +74,60 @@ const HomePage = () => {
                         <p className="col-span-full text-center text-gray-500">No products found matching your search.</p>
                     ) : (
                         filteredProducts.map(product => (
-                            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col group transition-shadow hover:shadow-xl">
-                                {/* Product Image */}
-                                <div className="h-48 overflow-hidden">
-                                    <img 
-                                        src={product.image_url || 'https://via.placeholder.com/300'} 
-                                        alt={product.name}
-                                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                                    />
-                                </div>
-                                
-                                {/* Product Details */}
-                                <div className="p-4 flex-grow flex flex-col">
-                                    <h2 className="text-xl font-semibold text-gray-800 truncate" title={product.name}>
-                                        {product.name}
-                                    </h2>
+                            // --- Wrap the entire card in a Link component ---
+                            <Link key={product.id} to={`/products/${product.id}`} className="block">
+                                <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col group transition-shadow hover:shadow-xl h-full">
+                                    <div className="h-48 overflow-hidden">
+                                        <img 
+                                            src={product.image_url || 'https://via.placeholder.com/300'} 
+                                            alt={product.name}
+                                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                        />
+                                    </div>
                                     
-                                    {/* Vendor Name */}
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        Sold by: {' '}
-                                        <span className="text-blue-600 font-medium">
-                                            {product.vendor?.business_name || 'Anonymous Vendor'}
-                                        </span>
-                                    </p>
-                                    
-                                    <p className="text-gray-600 mt-2 flex-grow line-clamp-2">{product.description}</p>
-                                    
-                                    {/* Price and Add to Cart Button */}
-                                    <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                                        <p className="text-2xl font-bold text-gray-800">${product.price}</p>
+                                    <div className="p-4 flex-grow flex flex-col">
+                                        <h2 className="text-xl font-semibold text-gray-800 truncate" title={product.name}>
+                                            {product.name}
+                                        </h2>
                                         
-                                        {/* Tooltip Wrapper */}
-                                        <div className="relative group"> 
-                                            <button 
-                                                onClick={() => addToCart({ ...product, vendor_id: product.vendor_id })} 
-                                                disabled={!product.vendor?.stripe_account_id}
-                                                className="py-2 px-4 bg-yellow-500 text-gray-900 font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
-                                            >
-                                                <FaShoppingCart />
-                                            </button>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Sold by: {' '}
+                                            <span className="text-blue-600 font-medium">
+                                                {product.vendor?.business_name || 'Anonymous Vendor'}
+                                            </span>
+                                        </p>
+                                        
+                                        <p className="text-gray-600 mt-2 flex-grow line-clamp-2">{product.description}</p>
+                                        
+                                        <div className="flex justify-between items-center mt-auto pt-4 border-t">
+                                            <p className="text-2xl font-bold text-gray-800">${product.price.toFixed(2)}</p>
                                             
-                                            {/* Tooltip */}
-                                            {!product.vendor?.stripe_account_id && (
+                                            <div className="relative group"> 
+                                                <button 
+                                                    // Prevent the Link from firing when the button is clicked
+                                                    onClick={(e) => { 
+                                                        e.preventDefault(); 
+                                                        e.stopPropagation(); 
+                                                        addToCart({ ...product, vendor_id: product.vendor_id });
+                                                    }} 
+                                                    disabled={!product.vendor?.stripe_account_id}
+                                                    className="py-2 px-4 bg-yellow-500 text-gray-900 font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
+                                                >
+                                                    <FaShoppingCart />
+                                                </button>
+                                                
                                                 <div 
                                                     className="absolute bottom-full mb-2 p-2 bg-gray-800 text-white text-sm rounded-md shadow-lg 
                                                             whitespace-nowrap right-0 
                                                             opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                                                 >
-                                                    Not currently accepting payments!
-                                                    <div 
-                                                        className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 
-                                                                border-x-8 border-x-transparent border-t-8 border-t-gray-800"
-                                                    ></div>
+                                                    {!product.vendor?.stripe_account_id && "Not accepting payments"}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))
                     )}
                 </div>
