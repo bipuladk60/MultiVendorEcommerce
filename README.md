@@ -4,7 +4,7 @@ A full-stack e-commerce platform built with modern technologies, allowing multip
 
 ## 🚀 Live Demo
 
-[Live Site URL](https://multi-vendor-ecommerce-bipuladk60.vercel.app/)
+[Live Site URL](https://multi-vendor-ecommerce-phi.vercel.app/)
 
 ## ✨ Features
 
@@ -32,24 +32,29 @@ A full-stack e-commerce platform built with modern technologies, allowing multip
 ### Customer Interface
 
 #### Homepage & Product Listing
+
 ![Homepage](src/assets/Screenshot%202025-07-23%20at%201.30.01%20AM.png)
 *Homepage showing product listings and search functionality*
 
 #### Shopping Cart
+
 ![Shopping Cart](src/assets/Screenshot%202025-07-23%20at%201.30.34%20AM.png)
 *Shopping cart with product details and checkout option*
 
 #### Search Results
+
 ![Search Results](src/assets/Screenshot%202025-07-23%20at%201.30.58%20AM.png)
 *Search results showing filtered products*
 
 ### Vendor Dashboard
 
 #### Product Management
+
 ![Vendor Dashboard](src/assets/Screenshot%202025-07-23%20at%201.32.20%20AM.png)
 *Vendor dashboard showing product management interface*
 
 #### Analytics & Orders
+
 ![Analytics Dashboard](src/assets/Screenshot%202025-07-23%20at%201.32.58%20AM.png)
 *Analytics dashboard showing sales and order statistics*
 
