@@ -33,12 +33,12 @@ A full-stack e-commerce platform built with modern technologies, allowing multip
 
 #### Homepage & Product Listing
 
-![Homepage](src/assets/Screenshot%202025-07-23%20at%201.30.01%20AM.png)
+![Homepage](src/assets/Screenshot 2025-07-23 at 1.30.01 AM.png)
 *Homepage showing product listings and search functionality*
 
 #### Shopping Cart
 
-![Shopping Cart](src/assets/Screenshot%202025-07-23%20at%201.30.34%20AM.png)
+![Shopping Cart](src/assets/Screenshot 2025-07-23 at 1.30.34 AM.png)
 *Shopping cart with product details and checkout option*
 
 #### Search Results
