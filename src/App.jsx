@@ -1,8 +1,9 @@
 // src/App.jsx
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, useNavigate, useLocation } from 'react-router-dom'; // Add useNavigate, useLocation
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { useEffect } from 'react'; // Import useEffect for AppContent
 
 // Import Components
 import ErrorBoundary from './components/ErrorBoundary';
@@ -22,12 +23,12 @@ import UserProfilePage from './pages/UserProfilePage';
 import CartPage from './pages/CartPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
 import StripeReturnPage from './pages/StripeReturnPage';
-import CheckoutPage from './pages/CheckoutPage';         // 1. Import CheckoutPage
-import OrderSuccessPage from './pages/OrderSuccessPage'; // 2. Import OrderSuccessPage
+import CheckoutPage from './pages/CheckoutPage';
+import OrderSuccessPage from './pages/OrderSuccessPage';
 
 const queryClient = new QueryClient();
 
-// NavbarController component (no changes needed)
+// NavbarController component
 const NavbarController = () => {
   const { user, profile } = useAuth();
   if (profile?.role === 'vendor') return <VendorNavbar />;
@@ -35,7 +36,7 @@ const NavbarController = () => {
   return <GuestNavbar />;
 };
 
-// MainLayout component (no changes needed)
+// MainLayout component with Outlet for nested routes
 const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
@@ -47,16 +48,30 @@ const MainLayout = () => {
   );
 };
 
-// LoadingScreen component (no changes needed)
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gray-100 flex items-center justify-center">
     <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 );
 
-// AppContent handles the core routing logic
+// AppContent handles the core routing logic and initial redirects
 const AppContent = () => {
-  const { loading } = useAuth();
+  const { loading, user, profile } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // --- THE FIX: Initial role-based redirect on app load ---
+  useEffect(() => {
+    // Only attempt redirect if:
+    // 1. Auth loading is complete (`!loading`).
+    // 2. A user is logged in (`user`).
+    // 3. Their profile role is 'vendor' (`profile?.role === 'vendor'`).
+    // 4. They are currently on the root path (`location.pathname === '/'`).
+    if (!loading && user && profile?.role === 'vendor' && location.pathname === '/') {
+      console.log("Redirecting vendor to dashboard from root URL.");
+      navigate('/vendor/dashboard', { replace: true }); // 'replace' prevents adding to history
+    }
+  }, [loading, user, profile, location.pathname, navigate]); // Dependencies for this effect
 
   if (loading) {
     return <LoadingScreen />;
@@ -64,7 +79,7 @@ const AppContent = () => {
 
   return (
     <Routes>
-      {/* Routes WITHOUT the main layout */}
+      {/* Routes WITHOUT the main layout (e.g., full-screen login pages) */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/vendor/login" element={<VendorLoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
@@ -78,7 +93,7 @@ const AppContent = () => {
         <Route path="cart" element={<CartPage />} />
         <Route path="profile" element={<UserProfilePage />} />
 
-        {/* --- 3. THE FIX: Add the checkout and order success routes here --- */}
+        {/* Checkout & Order Success (public-ish, but usually requires logged in user) */}
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="order-success" element={<OrderSuccessPage />} />
 

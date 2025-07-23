@@ -1,10 +1,10 @@
 // src/pages/VendorProfilePage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { FaStore, FaBox, FaChartLine } from 'react-icons/fa';
-import { Line } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,6 +14,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  ArcElement
 } from 'chart.js';
 
 // Register Chart.js components
@@ -24,7 +25,8 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  ArcElement
 );
 
 // API function to fetch vendor orders using our secure RPC call
@@ -42,28 +44,64 @@ const fetchVendorOrders = async () => {
 // API function to calculate analytics based on fetched orders
 const calculateVendorAnalytics = (orders) => {
   if (!orders || orders.length === 0) {
-    return { totalOrders: 0, totalRevenue: 0, completedOrders: 0, processingOrders: 0, dailySales: {}, weeklySales: {} };
+    return {
+      totalOrders: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+      completedOrders: 0,
+      recentSales: [],
+      ordersByStatus: {}
+    };
   }
-  
+
+  // Sort orders by date
+  const sortedOrders = [...orders].sort((a, b) => 
+    new Date(a.created_at) - new Date(b.created_at)
+  );
+
+  // Get last 30 days of sales
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // Calculate basic metrics
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total_price), 0);
-  const completedOrders = orders.filter(o => o.status === 'Delivered').length;
-  const processingOrders = orders.filter(o => o.status === 'Processing' || o.status === 'Shipped').length;
+  const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+  const completedOrders = orders.filter(o => o.status === 'Completed').length;
 
-  const dailySales = {};
-  const weeklySales = {};
+  // Calculate orders by status
+  const ordersByStatus = orders.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1;
+    return acc;
+  }, {});
 
-  orders.forEach(order => {
-    const orderDate = new Date(order.created_at);
-    const dateKey = orderDate.toISOString().split('T')[0];
-    dailySales[dateKey] = (dailySales[dateKey] || 0) + parseFloat(order.total_price);
+  // Calculate daily sales for the last 30 days
+  const recentSales = [];
+  let currentDate = new Date(thirtyDaysAgo);
 
-    const weekStart = new Date(orderDate.getFullYear(), orderDate.getMonth(), orderDate.getDate() - orderDate.getDay());
-    const weekKey = weekStart.toISOString().split('T')[0];
-    weeklySales[weekKey] = (weeklySales[weekKey] || 0) + parseFloat(order.total_price);
-  });
+  while (currentDate <= new Date()) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dayOrders = orders.filter(order => 
+      order.created_at.split('T')[0] === dateStr
+    );
+    
+    recentSales.push({
+      date: dateStr,
+      revenue: dayOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0),
+      orders: dayOrders.length
+    });
 
-  return { totalOrders, totalRevenue, completedOrders, processingOrders, dailySales, weeklySales };
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return {
+    totalOrders,
+    totalRevenue,
+    pendingOrders,
+    completedOrders,
+    recentSales,
+    ordersByStatus
+  };
 };
 
 const VendorProfilePage = () => {
@@ -72,6 +110,10 @@ const VendorProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
   
+  // Add chart refs
+  const revenueChartRef = useRef(null);
+  const statusChartRef = useRef(null);
+
   const [formData, setFormData] = useState({
     business_name: '', phone: '', address: '', tax_id: ''
   });
@@ -216,84 +258,186 @@ const VendorProfilePage = () => {
   );
 
   const renderAnalyticsSection = () => {
-    // Prepare data for Chart.js
-    const getChartData = (salesData, title) => {
-      const labels = Object.keys(salesData).sort();
-      const data = labels.map(label => salesData[label]);
-      
-      return {
-        labels,
-        datasets: [
-          {
-            label: title,
-            data,
-            fill: false,
-            borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1,
-          },
-        ],
-      };
+    if (analyticsLoading) {
+      return (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
+          <p>Loading analytics...</p>
+        </div>
+      );
+    }
+
+    // Prepare data for the revenue chart
+    const revenueChartData = {
+      labels: analytics.recentSales.map(sale => {
+        const date = new Date(sale.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }),
+      datasets: [
+        {
+          label: 'Daily Revenue',
+          data: analytics.recentSales.map(sale => sale.revenue),
+          borderColor: 'rgb(59, 130, 246)', // blue-500
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label: 'Number of Orders',
+          data: analytics.recentSales.map(sale => sale.orders),
+          borderColor: 'rgb(16, 185, 129)', // green-500
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: true,
+          tension: 0.4,
+          yAxisID: 'ordersAxis'
+        }
+      ]
     };
 
-    const chartOptions = {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'top',
-            },
-            title: {
-                display: true,
-                text: 'Sales Over Time',
-            },
+    const revenueChartOptions = {
+      responsive: true,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: 'Revenue ($)'
-                }
-            },
-            x: {
-                title: {
-                    display: true,
-                    text: 'Date'
-                }
-            }
+        title: {
+          display: true,
+          text: 'Last 30 Days Performance'
         }
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: 'Revenue ($)'
+          }
+        },
+        ordersAxis: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: 'Number of Orders'
+          },
+          grid: {
+            drawOnChartArea: false
+          }
+        }
+      }
+    };
+
+    // Prepare data for the status chart
+    const statusChartData = {
+      labels: Object.keys(analytics.ordersByStatus),
+      datasets: [{
+        data: Object.values(analytics.ordersByStatus),
+        backgroundColor: [
+          'rgba(59, 130, 246, 0.8)', // blue
+          'rgba(16, 185, 129, 0.8)', // green
+          'rgba(245, 158, 11, 0.8)', // yellow
+          'rgba(239, 68, 68, 0.8)',  // red
+          'rgba(107, 114, 128, 0.8)' // gray
+        ]
+      }]
+    };
+
+    const statusChartOptions = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'right',
+        },
+        title: {
+          display: true,
+          text: 'Orders by Status'
+        }
+      }
     };
 
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
-        {analyticsLoading ? <p>Loading analytics...</p> : (
+      <div className="space-y-6">
+        {/* Summary Cards */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Business Analytics</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-blue-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-blue-800">Total Orders</h3><p className="text-3xl font-bold text-blue-600 mt-2">{analytics?.totalOrders}</p></div>
-            <div className="bg-green-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-green-800">Total Revenue</h3><p className="text-3xl font-bold text-green-600 mt-2">${analytics?.totalRevenue.toFixed(2)}</p></div>
-            <div className="bg-yellow-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-yellow-800">Processing Orders</h3><p className="text-3xl font-bold text-yellow-600 mt-2">{analytics?.processingOrders}</p></div>
-            <div className="bg-purple-50 p-6 rounded-lg"><h3 className="text-lg font-medium text-purple-800">Completed Orders</h3><p className="text-3xl font-bold text-purple-600 mt-2">{analytics?.completedOrders}</p></div>
-          </div>
-        )}
-        
-        {/* Sales Chart */}
-        {!analyticsLoading && analytics?.totalOrders > 0 && (
-            <div className="mt-8">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Daily Sales</h3>
-                <div className="h-80 w-full"> {/* Provide a height for the chart */}
-                    <Line data={getChartData(analytics.dailySales, 'Daily Revenue')} options={chartOptions} />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mt-8 mb-4">Weekly Sales</h3>
-                <div className="h-80 w-full">
-                    <Line data={getChartData(analytics.weeklySales, 'Weekly Revenue')} options={chartOptions} />
-                </div>
+            <div className="bg-blue-50 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-blue-800">Total Orders</h3>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{analytics.totalOrders}</p>
             </div>
+            <div className="bg-green-50 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-green-800">Total Revenue</h3>
+              <p className="text-3xl font-bold text-green-600 mt-2">
+                ${analytics.totalRevenue.toFixed(2)}
+              </p>
+            </div>
+            <div className="bg-yellow-50 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-yellow-800">Pending Orders</h3>
+              <p className="text-3xl font-bold text-yellow-600 mt-2">{analytics.pendingOrders}</p>
+            </div>
+            <div className="bg-purple-50 p-6 rounded-lg">
+              <h3 className="text-lg font-medium text-purple-800">Completed Orders</h3>
+              <p className="text-3xl font-bold text-purple-600 mt-2">{analytics.completedOrders}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts */}
+        {analytics.totalOrders > 0 && (
+          <>
+            {/* Revenue and Orders Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="h-[400px]">
+                <Line
+                  ref={revenueChartRef}
+                  data={revenueChartData}
+                  options={revenueChartOptions}
+                  key="revenue-chart"
+                />
+              </div>
+            </div>
+
+            {/* Orders by Status Chart */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="h-[300px]">
+                <Doughnut
+                  ref={statusChartRef}
+                  data={statusChartData}
+                  options={statusChartOptions}
+                  key="status-chart"
+                />
+              </div>
+            </div>
+          </>
         )}
-        {!analyticsLoading && analytics?.totalOrders === 0 && (
-            <p className="mt-8 text-gray-500">No sales data to display for charts yet.</p>
+
+        {analytics.totalOrders === 0 && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <p className="text-gray-500 text-center">No sales data available yet.</p>
+          </div>
         )}
       </div>
     );
   };
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (revenueChartRef.current) {
+        revenueChartRef.current.destroy();
+      }
+      if (statusChartRef.current) {
+        statusChartRef.current.destroy();
+      }
+    };
+  }, []);
 
 
   return (
