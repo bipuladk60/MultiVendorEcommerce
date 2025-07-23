@@ -9,7 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import CustomerNavbar from './components/CustomerNavbar';
 import VendorNavbar from './components/VendorNavbar';
 import GuestNavbar from './components/GuestNavbar';
-import ProtectedRoute from './components/ProtectedRoute'; // Your route guard
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Import Pages
 import HomePage from './pages/HomePage';
@@ -17,14 +17,17 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import VendorLoginPage from './pages/VendorLoginPage';
 import VendorDashboardPage from './pages/VendorDashboardPage';
-import VendorProfilePage from './pages/VendorProfilePage'; // New
-import UserProfilePage from './pages/UserProfilePage';     // New
+import VendorProfilePage from './pages/VendorProfilePage';
+import UserProfilePage from './pages/UserProfilePage';
 import CartPage from './pages/CartPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
+import StripeReturnPage from './pages/StripeReturnPage';
+import CheckoutPage from './pages/CheckoutPage';         // 1. Import CheckoutPage
+import OrderSuccessPage from './pages/OrderSuccessPage'; // 2. Import OrderSuccessPage
 
 const queryClient = new QueryClient();
 
-// NavbarController component
+// NavbarController component (no changes needed)
 const NavbarController = () => {
   const { user, profile } = useAuth();
   if (profile?.role === 'vendor') return <VendorNavbar />;
@@ -32,7 +35,7 @@ const NavbarController = () => {
   return <GuestNavbar />;
 };
 
-// MainLayout component with Outlet for nested routes
+// MainLayout component (no changes needed)
 const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
@@ -44,6 +47,7 @@ const MainLayout = () => {
   );
 };
 
+// LoadingScreen component (no changes needed)
 const LoadingScreen = () => (
   <div className="min-h-screen bg-gray-100 flex items-center justify-center">
     <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -65,6 +69,7 @@ const AppContent = () => {
       <Route path="/vendor/login" element={<VendorLoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/access-denied" element={<AccessDeniedPage />} />
+      <Route path="/stripe-return" element={<StripeReturnPage />} />
       
       {/* Routes WITH the main layout */}
       <Route path="/" element={<MainLayout />}>
@@ -72,6 +77,10 @@ const AppContent = () => {
         <Route index element={<HomePage />} />
         <Route path="cart" element={<CartPage />} />
         <Route path="profile" element={<UserProfilePage />} />
+
+        {/* --- 3. THE FIX: Add the checkout and order success routes here --- */}
+        <Route path="checkout" element={<CheckoutPage />} />
+        <Route path="order-success" element={<OrderSuccessPage />} />
 
         {/* Protected Vendor routes */}
         <Route element={<ProtectedRoute />}>
@@ -91,7 +100,7 @@ const AppContent = () => {
   );
 };
 
-// Main App component
+// Main App component (no changes needed)
 function App() {
   return (
     <ErrorBoundary>

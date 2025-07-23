@@ -8,6 +8,7 @@ import { FaShoppingCart } from 'react-icons/fa';
 const fetchAllProducts = async () => {
     const { data, error } = await supabase
         .from('products')
+        // --- THE FIX: Removed the SQL comment from here ---
         .select(`
             *,
             vendor:vendor_id (
@@ -71,7 +72,8 @@ const HomePage = () => {
                                     {/* Tooltip Wrapper */}
                                     <div className="relative group"> 
                                         <button 
-                                            onClick={() => addToCart(product)}
+                                            // Pass a new object with explicit vendor_id for robustness
+                                            onClick={() => addToCart({ ...product, vendor_id: product.vendor_id })} 
                                             disabled={!product.vendor?.stripe_account_id}
                                             className="py-2 px-4 bg-yellow-500 text-gray-900 font-semibold rounded-lg shadow-md hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
                                         >
