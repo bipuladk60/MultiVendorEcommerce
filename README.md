@@ -27,6 +27,60 @@ A full-stack e-commerce platform built with modern technologies, allowing multip
   - Vendor payout management
   - Order tracking
 
+- 🎯 **Smart Advertisement System**
+  - Automated product promotion
+  - Dynamic ad placement based on:
+    - Product popularity
+    - Recent views
+    - Purchase history
+    - Seasonal trends
+  - Ad performance analytics
+  - Vendor-specific promotion slots
+  - Smart pricing for ad slots
+  - A/B testing capabilities
+
+## 🚀 How the Ad System Works
+
+Our automated advertisement system uses a sophisticated algorithm to optimize product visibility and sales:
+
+### Ad Placement Logic
+1. **Popularity Score**
+   - Based on views, purchases, and user interactions
+   - Weighted by recency of interactions
+   - Seasonal adjustments for relevant products
+
+2. **Dynamic Pricing**
+   - Automated bid adjustments based on:
+     - Time of day
+     - User traffic
+     - Historical performance
+     - Competition level
+
+3. **Smart Targeting**
+   - User behavior analysis
+   - Purchase history matching
+   - Category affinity scoring
+   - Geographic relevance
+
+4. **Performance Optimization**
+   - Real-time performance tracking
+   - Automatic bid adjustments
+   - ROI optimization
+   - A/B testing of ad placements
+
+### Benefits for Vendors
+- Increased product visibility
+- Better ROI on advertising spend
+- Automated optimization
+- Detailed performance analytics
+- Competitive advantage through smart pricing
+
+### Benefits for Customers
+- More relevant product recommendations
+- Seasonal and trending product discovery
+- Personalized shopping experience
+- Better deals through smart promotion
+
 ## 📸 Screenshots
 
 ### Customer Interface
