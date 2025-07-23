@@ -31,31 +31,26 @@ A full-stack e-commerce platform built with modern technologies, allowing multip
 
 ### Customer Interface
 
-#### Homepage & Product Listing
-
-![Homepage](src/assets/Screenshot 2025-07-23 at 1.30.01 AM.png)
+#### Homepage & Marketplace
+![Homepage](/src/assets/marketplace.png)
 *Homepage showing product listings and search functionality*
 
 #### Shopping Cart
-
-![Shopping Cart](src/assets/Screenshot 2025-07-23 at 1.30.34 AM.png)
+![Shopping Cart](/src/assets/shoppingcart.png)
 *Shopping cart with product details and checkout option*
 
-#### Search Results
-
-![Search Results](src/assets/Screenshot%202025-07-23%20at%201.30.58%20AM.png)
-*Search results showing filtered products*
+#### Payment Processing
+![Payment](/src/assets/payment.png)
+*Secure payment processing with Stripe integration*
 
 ### Vendor Dashboard
 
 #### Product Management
-
-![Vendor Dashboard](src/assets/Screenshot%202025-07-23%20at%201.32.20%20AM.png)
+![Vendor Dashboard](/src/assets/vendordashboard.png)
 *Vendor dashboard showing product management interface*
 
 #### Analytics & Orders
-
-![Analytics Dashboard](src/assets/Screenshot%202025-07-23%20at%201.32.58%20AM.png)
+![Analytics Dashboard](/src/assets/vendoranalytics.png)
 *Analytics dashboard showing sales and order statistics*
 
 ## 🛠️ Tech Stack
