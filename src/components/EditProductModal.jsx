@@ -1,15 +1,14 @@
 // src/components/EditProductModal.jsx
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase } from '../utils/supabaseClient';
 
-// Zod schema for product validation - 'weight' has been removed
+// Zod schema for product validation (is_promoted removed)
 const updateProductSchema = z.object({
     name: z.string().min(3, 'Product name must be at least 3 characters.'),
     description: z.string().optional(),
     price: z.preprocess((a) => parseFloat(z.string().parse(a)), z.number().positive('Price must be a positive number.')),
-    is_promoted: z.boolean().optional().default(false),
 });
 
 const updateProduct = async ({ productId, updatedData }) => {
@@ -18,16 +17,17 @@ const updateProduct = async ({ productId, updatedData }) => {
 };
 
 const EditProductModal = ({ product, onClose, onProductUpdate }) => {
-    const [formData, setFormData] = useState(product || {});
+    const [formData, setFormData] = useState({});
     const [formError, setFormError] = useState(null);
 
+    // Sync formData with product prop when it changes
     useEffect(() => {
         if (product) {
             setFormData({
                 name: product.name || '',
                 description: product.description || '',
                 price: product.price || 0.0,
-                is_promoted: product.is_promoted || false,
+                // is_promoted is removed from here
             });
         }
     }, [product]);
@@ -43,8 +43,8 @@ const EditProductModal = ({ product, onClose, onProductUpdate }) => {
     });
 
     const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        const parsedValue = name === 'price' ? parseFloat(value) : (type === 'checkbox' ? checked : value);
+        const { name, value } = e.target;
+        const parsedValue = name === 'price' ? parseFloat(value) : value;
         setFormData(prev => ({ ...prev, [name]: parsedValue }));
     };
 
@@ -59,7 +59,7 @@ const EditProductModal = ({ product, onClose, onProductUpdate }) => {
         mutation.mutate({ productId: product.id, updatedData: result.data });
     };
 
-    if (!product) return null;
+    if (!product || Object.keys(formData).length === 0) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
@@ -71,12 +71,8 @@ const EditProductModal = ({ product, onClose, onProductUpdate }) => {
                     <div><label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label><textarea name="description" value={formData.description || ''} onChange={handleChange} rows="3" className="mt-1 block w-full p-2 border rounded-md shadow-sm text-gray-900"></textarea></div>
                     <div><label htmlFor="price" className="block text-sm font-medium text-gray-700">Price ($)</label><input type="number" name="price" value={formData.price || ''} onChange={handleChange} step="0.01" required className="mt-1 block w-full p-2 border rounded-md shadow-sm text-gray-900"/></div>
                     
-                    {/* --- WEIGHT INPUT FIELD REMOVED --- */}
+                    {/* --- "Promote" checkbox has been removed from this form --- */}
 
-                    <div className="flex items-center">
-                        <input type="checkbox" id="is_promoted" name="is_promoted" checked={!!formData.is_promoted} onChange={handleChange} className="h-4 w-4 text-blue-600 border-gray-300 rounded"/>
-                        <label htmlFor="is_promoted" className="ml-2 block text-sm text-gray-900">Include in Google Shopping Ads (Free Promotion!)</label>
-                    </div>
                     <div className="flex justify-end space-x-4 pt-4">
                         <button type="button" onClick={onClose} className="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
                         <button type="submit" disabled={mutation.isPending} className="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
