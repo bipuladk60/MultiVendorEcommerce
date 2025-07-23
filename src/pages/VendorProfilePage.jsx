@@ -29,22 +29,25 @@ const VendorProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
 
-  // Initialize with an empty structure
+  // Update the initial form state to match the profile fields
   const [formData, setFormData] = useState({
-    business_name: '', phone: '', address: '', tax_id: ''
+    business_name: '',
+    phone: '',
+    business_address: '',
+    tax_id: ''
   });
 
-  // --- 2. THE FIX: Use useEffect to sync state when profile data loads ---
+  // Update the useEffect to sync with profile data
   useEffect(() => {
     if (profile) {
       setFormData({
         business_name: profile.business_name || '',
         phone: profile.phone || '',
-        address: profile.address || '',
-        tax_id: profile.tax_id || '',
+        business_address: profile.business_address || '',
+        tax_id: profile.tax_id || ''
       });
     }
-  }, [profile]); // This dependency array tells React to run this code whenever `profile` changes
+  }, [profile]);
 
   // Update the query configuration
   // Fetch orders
@@ -140,15 +143,6 @@ const VendorProfilePage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                disabled
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50"
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700">Phone</label>
               <input
                 type="tel"
@@ -187,7 +181,7 @@ const VendorProfilePage = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Business Name</label>
-              <p className="mt-1 text-sm text-gray-900">{profile?.business_name}</p>
+              <p className="mt-1 text-sm text-gray-900">{profile?.business_name || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
@@ -199,7 +193,7 @@ const VendorProfilePage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Business Address</label>
-              <p className="mt-1 text-sm text-gray-900">{profile?.business_address || 'Not provided'}</p>
+              <p className="mt-1 text-sm text-gray-900 whitespace-pre-line">{profile?.business_address || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Tax ID</label>
