@@ -1,50 +1,35 @@
 // src/components/ProtectedRoute.jsx
-import { Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../utils/supabaseClient';
 import AccessDeniedPage from '../pages/AccessDeniedPage';
 
-// This function fetches the user's profile from the 'profiles' table
-const fetchUserProfile = async (userId) => {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
+// A simple loading spinner component to be consistent
+const LoadingScreen = () => (
+  <div className="flex justify-center items-center h-screen bg-gray-100">
+    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
-    if (error) {
-        throw new Error(error.message);
-    }
-    return data;
-};
+const ProtectedRoute = () => {
+  const { user, profile, loading } = useAuth();
 
-const ProtectedRoute = ({ children }) => {
-    const { user } = useAuth();
+  // 1. First, respect the loading state from the AuthContext.
+  //    Although App.jsx also has a loading guard, this makes the component
+  //    self-contained and safe.
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
-    // Use TanStack Query to fetch the profile
-    const { data: profile, isLoading, isError } = useQuery({
-        queryKey: ['userProfile', user?.id],
-        queryFn: () => fetchUserProfile(user.id),
-        enabled: !!user, // Only run the query if the user exists
-    });
+  // 2. After loading is complete, check the user's role.
+  //    We check for a logged-in 'user' first, then the 'profile.role'.
+  //    The optional chaining `?.` is a final safety check.
+  if (user && profile?.role === 'vendor') {
+    // If they are a vendor, render the child route (e.g., VendorDashboardPage).
+    return <Outlet />;
+  }
 
-    // 1. While loading, show a loading indicator
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <div className="text-xl font-semibold">Loading...</div>
-            </div>
-        );
-    }
-
-    // 2. If there's an error fetching or the user is not a vendor, redirect
-    if (isError || !user || profile?.role !== 'vendor') {
-        return <AccessDeniedPage />;
-    }
-
-    // 3. If everything is fine, render the children
-    return children;
+  // 3. If they are not a vendor (or not logged in), show the Access Denied page.
+  return <AccessDeniedPage />;
 };
 
 export default ProtectedRoute;

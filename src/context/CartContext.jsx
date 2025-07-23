@@ -1,30 +1,51 @@
 // src/context/CartContext.jsx
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
 
 const CartContext = createContext();
 
-// Custom hook for easy access to the cart context
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-    const [cartItems, setCartItems] = useState([]);
+    // --- CHANGE #1: Initialize state from localStorage ---
+    // We use a function inside useState to run this logic only once on initial load.
+    const [cartItems, setCartItems] = useState(() => {
+        try {
+            // Try to get the saved cart from localStorage
+            const localData = localStorage.getItem('cart');
+            // If data exists, parse it from JSON. Otherwise, return an empty array.
+            return localData ? JSON.parse(localData) : [];
+        } catch (error) {
+            console.error("Error parsing cart from localStorage", error);
+            // If there's an error (e.g., corrupted data), start with an empty cart.
+            return [];
+        }
+    });
+
+    // --- CHANGE #2: Save to localStorage whenever the cart changes ---
+    // This useEffect hook runs every time the `cartItems` state is updated.
+    useEffect(() => {
+        // Convert the cartItems array to a JSON string and save it.
+        localStorage.setItem('cart', JSON.stringify(cartItems));
+    }, [cartItems]); // The dependency array ensures this runs only when cartItems changes.
+
+
+    // All the functions below remain the same. They modify the state,
+    // which then triggers the useEffect hook to save the new state.
 
     const addToCart = (product) => {
         setCartItems(prevItems => {
-            // Check if the item is already in the cart
             const itemExists = prevItems.find(item => item.id === product.id);
             if (itemExists) {
-                // If it exists, update the quantity
                 return prevItems.map(item =>
                     item.id === product.id
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
-            // If it's a new item, add it to the cart with quantity 1
             return [...prevItems, { ...product, quantity: 1 }];
         });
-        alert(`${product.name} added to cart!`);
+        // We can remove the alert for a smoother UX or keep it if you like
+        // alert(`${product.name} added to cart!`);
     };
 
     const removeFromCart = (productId) => {
@@ -32,12 +53,13 @@ export const CartProvider = ({ children }) => {
     };
     
     const updateQuantity = (productId, quantity) => {
-        if (quantity <= 0) {
+        const numQuantity = parseInt(quantity, 10);
+        if (numQuantity <= 0) {
             removeFromCart(productId);
         } else {
             setCartItems(prevItems =>
                 prevItems.map(item =>
-                    item.id === productId ? { ...item, quantity } : item
+                    item.id === productId ? { ...item, quantity: numQuantity } : item
                 )
             );
         }
